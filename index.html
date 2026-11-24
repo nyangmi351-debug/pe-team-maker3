@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>밸런스 팀메이커</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f7f2; --card:#ffffff; --ink:#1f2a24; --sub:#5b6b62; --line:#dde5df;
+    --main:#16a34a; --main-dark:#15803d; --main-soft:#dcfce7;
+    --warn:#f59e0b; --danger:#ef4444; --blue:#2563eb;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,"Malgun Gothic",sans-serif;-webkit-tap-highlight-color:transparent}
+  body{min-height:100vh}
+  button{font-family:inherit;cursor:pointer;border:none}
+  input,textarea,select{font-family:inherit;font-size:16px}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px}
+  .logo .ball{width:36px;height:36px;border-radius:50%;background:var(--main);color:#fff;display:grid;place-items:center;font-size:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .card+.card{margin-top:16px}
+  h2{font-size:22px;margin-bottom:6px}
+  h3{font-size:17px;margin-bottom:10px}
+  .muted{color:var(--sub);font-size:14px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grow{flex:1}
+  .btn{padding:11px 18px;border-radius:12px;font-weight:700;font-size:15px;background:#eef2ef;color:var(--ink);transition:.15s}
+  .btn:hover{filter:brightness(.96)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.main{background:var(--main);color:#fff}
+  .btn.main:hover{background:var(--main-dark)}
+  .btn.blue{background:var(--blue);color:#fff}
+  .btn.danger{background:#fee2e2;color:#b91c1c}
+  .btn.ghost{background:transparent;border:1px solid var(--line)}
+  .btn.big{padding:16px 26px;font-size:18px;border-radius:14px}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:9px}
+  textarea,input[type=text],input[type=password],input[type=number],select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}
+  textarea:focus,input:focus,select:focus{border-color:var(--main)}
+  label.lb{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+  .steps{display:flex;gap:6px;margin-bottom:16px}
+  .steps span{flex:1;text-align:center;padding:8px;border-radius:10px;background:#e8eee9;font-size:13px;font-weight:700;color:var(--sub)}
+  .steps span.on{background:var(--main);color:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+  .seg{display:flex;background:#eef2ef;border-radius:12px;padding:4px;gap:4px}
+  .seg button{flex:1;padding:10px;border-radius:9px;background:transparent;font-weight:700;color:var(--sub);font-size:14px}
+  .seg button.on{background:#fff;color:var(--main-dark);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .crit{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .crit b{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;background:var(--main-soft);color:var(--main-dark)}
+  .list-item{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
+  .list-item:last-child{border-bottom:none}
+  .tag{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#eef2ef;color:var(--sub)}
+  .tag.green{background:var(--main-soft);color:var(--main-dark)}
+  .tag.blue{background:#dbeafe;color:#1d4ed8}
+  .tag.orange{background:#ffedd5;color:#c2410c}
+  .tag.gray{background:#e5e7eb;color:#4b5563}
+  /* 실시간 현황 */
+  .live-head{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
+  @media(max-width:760px){.live-head{grid-template-columns:1fr}}
+  .qrbox{background:#fff;padding:12px;border-radius:14px;border:1px solid var(--line);width:204px}
+  .code{font-size:64px;font-weight:900;letter-spacing:10px;color:var(--main-dark);line-height:1}
+  .bar{height:14px;background:#e8eee9;border-radius:999px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--main);transition:width .4s}
+  .stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .stu{border-radius:13px;padding:12px;border:2px solid var(--line);background:#fff;text-align:left;font-size:15px}
+  .stu .nm{font-weight:800;font-size:16px}
+  .stu .st{font-size:12px;margin-top:4px;color:var(--sub)}
+  .stu.done{border-color:#86efac;background:#f0fdf4}
+  .stu.teacher{border-color:#93c5fd;background:#eff6ff}
+  .stu.absent{opacity:.5;text-decoration:line-through}
+  .stu.need{border-color:#fcd34d;background:#fffbeb}
+  .banner{padding:16px 18px;border-radius:14px;background:var(--main);color:#fff;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .banner.wait{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;font-size:15px}
+  /* 팀 결과 */
+  .teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:16px}
+  .team{border-radius:16px;border:2px solid;background:#fff;overflow:hidden;min-height:120px}
+  .team.over{outline:3px dashed var(--ink);outline-offset:2px}
+  .team-h{padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .team-h .nm{font-weight:900;font-size:18px;cursor:pointer}
+  .team-stat{padding:7px 14px;font-size:12px;color:var(--sub);border-bottom:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap}
+  .members{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:60px}
+  .mem{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#f7f9f7;cursor:grab;user-select:none;border:1px solid transparent}
+  .mem:active{cursor:grabbing}
+  .mem.over{border-color:var(--ink)}
+  .mem .g{font-size:12px;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:800;flex:none}
+  .mem .g.M{background:#dbeafe;color:#1d4ed8}.mem .g.F{background:#fce7f3;color:#be185d}
+  .mem .n{font-weight:700;flex:1}
+  .mem .sc{font-size:13px;font-weight:800;color:var(--sub)}
+  .cap{background:#facc15;color:#422006;font-size:11px;font-weight:900;padding:2px 7px;border-radius:999px}
+  .capbtn{background:transparent;font-size:15px;opacity:.25;padding:0 2px}
+  .capbtn.on{opacity:1}
+  /* 투사 모드 */
+  .proj{position:fixed;inset:0;background:#0f172a;z-index:50;overflow:auto;padding:28px}
+  .proj .teams{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+  .proj .team{border-width:0}
+  .proj .team-h{padding:18px 22px}
+  .proj .team-h .nm{font-size:34px}
+  .proj .members{padding:14px;gap:10px}
+  .proj .mem{background:#f8fafc;padding:12px 16px;cursor:default}
+  .proj .mem .n{font-size:30px}
+  .proj .cap{font-size:18px;padding:4px 12px}
+  /* 학생 화면 */
+  .s-wrap{max-width:980px;margin:0 auto;padding:18px}
+  .s-title{font-size:26px;font-weight:900;text-align:center;margin:10px 0 4px}
+  .s-sub{text-align:center;color:var(--sub);font-size:17px;margin-bottom:18px}
+  .name-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .name-card{padding:22px 10px;border-radius:16px;background:#fff;border:2px solid var(--line);font-size:22px;font-weight:800;color:var(--ink);box-shadow:0 2px 0 var(--line)}
+  .name-card:active{transform:translateY(2px);box-shadow:none}
+  .name-card:disabled{background:#eef2ef;color:#9ca3af;box-shadow:none}
+  .name-card.sel{background:var(--main);color:#fff;border-color:var(--main-dark)}
+  .score-btn{display:flex;gap:14px;align-items:center;width:100%;text-align:left;padding:18px;border-radius:16px;background:#fff;border:2px solid var(--line);margin-bottom:12px;font-size:19px;font-weight:600;color:var(--ink)}
+  .score-btn b{flex:none;width:58px;height:58px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:var(--main-soft);color:var(--main-dark)}
+  .score-btn.on{border-color:var(--main);background:#f0fdf4}
+  .center-box{max-width:460px;margin:8vh auto;text-align:center}
+  .big-emoji{font-size:84px;margin-bottom:14px}
+  .code-input{font-size:44px!important;text-align:center;letter-spacing:14px;font-weight:900;padding:16px!important}
+  /* 모달·토스트 */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+  .modal{background:#fff;border-radius:20px;padding:24px;max-width:620px;width:100%;max-height:92vh;overflow:auto}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:13px 20px;border-radius:12px;font-weight:700;z-index:200;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center}
+  #toast.show{opacity:1}
+  .att{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+  .att label{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fff}
+  .att input[type=checkbox]{width:20px;height:20px}
+  .att select{width:auto;padding:5px 8px;margin-left:auto}
+  .empty{padding:26px;text-align:center;color:var(--sub)}
+</style>
+</head>
+<body>
+<div id="app"><div class="center-box"><div class="big-emoji">⏳</div>불러오는 중…</div></div>
+<div id="modal"></div>
+<div id="toast"></div>
+
+<script type="module">
+// =====================================================================
+// ① 여기만 바꾸세요 ─ Firebase 설정값과 교사 PIN
+//    (Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성 에서 복사)
+// =====================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBzTkIJZVU3Nf3lGiH9c5F78BMLe_x9VF0",
+  authDomain: "pe-team-maker.firebaseapp.com",
+  databaseURL: "https://pe-team-maker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pe-team-maker",
+  storageBucket: "pe-team-maker.firebasestorage.app",
+  messagingSenderId: "673364524665",
+  appId: "1:673364524665:web:6451102a5c2d163b03dea8"
+};
+const TEACHER_PIN = "1833";          // 교사 화면 비밀번호(숫자 4자리)
+const APP_NAME = "밸런스 팀메이커";   // 앱 이름
+// =====================================================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection,
+  getDocs, onSnapshot, query, orderBy, limit, deleteField, runTransaction
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+document.title = APP_NAME;
+
+// ---------------------------------------------------------------------
+// 상수 · 유틸
+// ---------------------------------------------------------------------
+const COLORS = [
+  { name: "빨강", bg: "#ef4444", soft: "#fee2e2", fg: "#fff" },
+  { name: "파랑", bg: "#3b82f6", soft: "#dbeafe", fg: "#fff" },
+  { name: "초록", bg: "#22c55e", soft: "#dcfce7", fg: "#fff" },
+  { name: "노랑", bg: "#eab308", soft: "#fef9c3", fg: "#422006" },
+  { name: "주황", bg: "#f97316", soft: "#ffedd5", fg: "#fff" },
+  { name: "보라", bg: "#a855f7", soft: "#f3e8ff", fg: "#fff" },
+  { name: "분홍", bg: "#ec4899", soft: "#fce7f3", fg: "#fff" },
+  { name: "하늘", bg: "#06b6d4", soft: "#cffafe", fg: "#fff" },
+  { name: "회색", bg: "#64748b", soft: "#f1f5f9", fg: "#fff" }
+];
+const C_SESS = "pe_sessions", C_CODES = "pe_codes", C_CLASSES = "pe_classes", C_TPL = "pe_templates";
+
+const app = document.getElementById("app");
+const modalEl = document.getElementById("modal");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = (n) => String(n).padStart(2, "0");
+const fmtDate = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const fmtDateTime = (ms) => { const d = new Date(ms); return `${fmtDate(ms)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const gLabel = (g) => (g === "M" ? "남" : "여");
+const fmtScore = (v) => (v == null ? "-" : Number.isInteger(v) ? String(v) : v.toFixed(1));
+
+function ls(key, val) {
+  try {
+    if (val === undefined) return JSON.parse(localStorage.getItem(key));
+    if (val === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(val));
+  } catch (e) { return null; }
+}
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function showModal(html) { modalEl.innerHTML = `<div class="modal-bg" onclick="if(event.target===this)A.closeModal()"><div class="modal">${html}</div></div>`; }
+function closeModal() { modalEl.innerHTML = ""; }
+function fail(e) { console.error(e); toast("오류: " + (e && e.message ? e.message : e)); }
+
+// ===ALGO START===  (팀 편성 알고리즘 ─ 화면과 상관없는 순수 계산 부분)
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+// 점수 → 등급(1~4). 동료평가 평균은 반올림(2.5 → 3)
+function tierOf(score) { return Math.min(4, Math.max(1, Math.round(score))); }
+// 점수 높은 순. 같은 점수끼리는 무작위 순서(다시 편성할 때마다 조합이 달라짐)
+function sortByScore(list) { return shuffle(list).sort((a, b) => b.score - a.score); }
+
+// 동료평가 균등 순환 배정: 모두가 정확히 k번씩 평가받도록 섞은 순서에서 다음 k명을 배정
+function makeAssign(ids, k) {
+  const order = shuffle(ids);
+  const n = order.length;
+  const kk = Math.max(0, Math.min(k, n - 1));
+  const assign = {};
+  order.forEach((id, i) => {
+    assign[id] = [];
+    for (let d = 1; d <= kk; d++) assign[id].push(order[(i + d) % n]);
+  });
+  return assign;
+}
+
+// 각 팀의 남/여 인원 목표(정원) 계산
+function genderQuotas(B, G, T) {
+  if (T === 2 && (B + G) % 2 === 1) {
+    // 홀수 인원 2팀: 0번 팀이 1명 많고, 인원이 적은 1번 팀에 남학생을 우선 1명 더 배치
+    const small = Math.floor((B + G) / 2);
+    let sb = Math.min(Math.ceil(B / 2), small);
+    let sg = small - sb;
+    if (sg > G) { sg = G; sb = small - G; }
+    return { M: [B - sb, sb], F: [G - sg, sg] };
+  }
+  const M = Array(T).fill(Math.floor(B / T)), F = Array(T).fill(Math.floor(G / T));
+  for (let i = 0; i < B % T; i++) M[i]++;              // 남는 남학생은 앞 팀부터
+  for (let i = 0; i < G % T; i++) F[T - 1 - i]++;      // 남는 여학생은 뒤 팀부터 → 팀 인원 차이 최대 1명
+  return { M, F };
+}
+
+// 층화 배분: 4점 → 1점 등급 순서로, 각 학생을 '그 등급 인원이 가장 적은 팀'에 배치
+// (같으면 같은 성별·등급 인원 → 팀 점수 합(정원 대비)이 낮은 팀 순으로 비교)
+function stratifiedDistribute(students, T, quota) {
+  const teams = Array.from({ length: T }, (_, i) => ({ members: [], tier: [0, 0, 0, 0, 0], sum: 0, cap: (quota.M[i] || 0) + (quota.F[i] || 0) }));
+  const left = { M: [...(quota.M || Array(T).fill(0))], F: [...(quota.F || Array(T).fill(0))] };
+  for (let t = 4; t >= 1; t--) {
+    const group = sortByScore(students.filter((s) => tierOf(s.score) === t));
+    for (const s of group) {
+      let best = -1, bestKey = null;
+      for (const i of shuffle([...Array(T).keys()])) {
+        if (left[s.gender][i] <= 0) continue;
+        const tm = teams[i];
+        const gt = tm.members.filter((m) => m.gender === s.gender && tierOf(m.score) === t).length;
+        const key = [tm.tier[t], gt, tm.cap ? tm.sum / tm.cap : 0];
+        if (!bestKey || key[0] < bestKey[0] || (key[0] === bestKey[0] && (key[1] < bestKey[1] || (key[1] === bestKey[1] && key[2] < bestKey[2] - 1e-9)))) {
+          best = i; bestKey = key;
+        }
+      }
+      if (best < 0) best = teams.reduce((b, tm, i) => (tm.members.length < teams[b].members.length ? i : b), 0);
+      const tm = teams[best];
+      tm.members.push(s); tm.tier[t]++; tm.sum += s.score; left[s.gender][best]--;
+    }
+  }
+  return improveBySwaps(teams.map((t) => t.members));
+}
+
+// 균형 점수(낮을수록 좋음): 등급별 인원 차이(4점 가중치 최대) > 성별·등급 차이 > 평균 점수 차이
+function balanceCost(teams) {
+  const T = teams.length;
+  const vr = (arr) => { const m = arr.reduce((a, b) => a + b, 0) / arr.length; return arr.reduce((a, b) => a + (b - m) * (b - m), 0); };
+  const spread = (arr) => Math.max(...arr) - Math.min(...arr);
+  let cost = 0;
+  for (let t = 1; t <= 4; t++) {
+    const c = teams.map((tm) => tm.filter((s) => tierOf(s.score) === t).length);
+    const w = t === 4 ? 4 : t === 3 ? 3 : 2;
+    cost += w * (1000 * Math.max(0, spread(c) - 1) + 100 * vr(c));
+    for (const g of ["M", "F"]) cost += 10 * vr(teams.map((tm) => tm.filter((s) => s.gender === g && tierOf(s.score) === t).length));
+  }
+  cost += vr(teams.map((tm) => (tm.length ? tm.reduce((a, s) => a + s.score, 0) / tm.length : 0))) * (T > 1 ? 1 : 0);
+  return cost;
+}
+// 같은 성별끼리 팀 간 맞바꾸기(인원·성비는 그대로)로 균형을 더 맞춤
+function improveBySwaps(teams) {
+  let cur = balanceCost(teams);
+  for (let iter = 0; iter < 300; iter++) {
+    let best = null;
+    for (let a = 0; a < teams.length; a++)
+      for (let b = a + 1; b < teams.length; b++)
+        for (let i = 0; i < teams[a].length; i++)
+          for (let j = 0; j < teams[b].length; j++) {
+            const x = teams[a][i], y = teams[b][j];
+            if (x.gender !== y.gender || x.score === y.score) continue;
+            teams[a][i] = y; teams[b][j] = x;
+            const c = balanceCost(teams);
+            teams[a][i] = x; teams[b][j] = y;
+            if (c < cur - 1e-9 && (!best || c < best.c)) best = { a, b, i, j, c };
+          }
+    if (!best) break;
+    const x = teams[best.a][best.i];
+    teams[best.a][best.i] = teams[best.b][best.j]; teams[best.b][best.j] = x;
+    cur = best.c;
+  }
+  return teams.map((tm) => tm.map((s) => s.id));
+}
+
+// 1) 섞어서 나누기(혼성 T팀)
+function makeMixedTeams(students, T) {
+  const B = students.filter((s) => s.gender === "M").length;
+  const G = students.length - B;
+  return stratifiedDistribute(students, T, genderQuotas(B, G, T));
+}
+// 2) 성별 분리 리그
+function makeGenderTeams(students, nBoy, nGirl) {
+  const split = (list, n, g) => {
+    if (n <= 0 || !list.length) return [];
+    const q = Array(n).fill(Math.floor(list.length / n));
+    for (let i = 0; i < list.length % n; i++) q[i]++;
+    return stratifiedDistribute(list, n, { M: g === "M" ? q : Array(n).fill(0), F: g === "F" ? q : Array(n).fill(0) });
+  };
+  return {
+    boys: split(students.filter((s) => s.gender === "M"), nBoy, "M"),
+    girls: split(students.filter((s) => s.gender === "F"), nGirl, "F")
+  };
+}
+// 3) 짝 만들기(2인 1조, 홀수면 3인 1조)
+function makePairs(students, sameGender) {
+  const groups = [];
+  const leftovers = [];
+  const pairSorted = (sorted) => {
+    for (let i = 0; i + 1 < sorted.length; i += 2) groups.push([sorted[i], sorted[i + 1]]);
+    if (sorted.length % 2 === 1) leftovers.push(sorted[sorted.length - 1]);
+  };
+  if (sameGender) {
+    pairSorted(sortByScore(students.filter((s) => s.gender === "M")));
+    pairSorted(sortByScore(students.filter((s) => s.gender === "F")));
+  } else {
+    const boys = sortByScore(students.filter((s) => s.gender === "M"));
+    const girls = sortByScore(students.filter((s) => s.gender === "F"));
+    const [small, large] = boys.length <= girls.length ? [boys, girls] : [girls, boys];
+    const a = small.length, b = large.length;
+    // 점수 차이 합이 가장 작도록 작은 쪽 모두를 큰 쪽 일부와 순서대로 매칭(DP)
+    const dp = Array.from({ length: a + 1 }, () => Array(b + 1).fill(Infinity));
+    for (let j = 0; j <= b; j++) dp[0][j] = 0;
+    for (let i = 1; i <= a; i++)
+      for (let j = i; j <= b; j++)
+        dp[i][j] = Math.min(dp[i][j - 1], dp[i - 1][j - 1] + Math.abs(small[i - 1].score - large[j - 1].score));
+    const used = new Set();
+    let i = a, j = b;
+    while (i > 0) {
+      if (j > i && dp[i][j] === dp[i][j - 1]) { j--; continue; }
+      groups.push([large[j - 1], small[i - 1]]); used.add(large[j - 1].id); i--; j--;
+    }
+    groups.reverse();
+    pairSorted(large.filter((s) => !used.has(s.id))); // 남는 학생은 같은 성별끼리 점수 비슷하게
+  }
+  // 같은 성별끼리에서 남·여 각각 1명씩 남으면 두 학생을 한 짝으로
+  if (leftovers.length === 2) { groups.push([...leftovers]); leftovers.length = 0; }
+  // 남는 1명은 점수가 가장 비슷한 짝(2인조 우선)에 합류 → 3인 1조
+  for (const s of leftovers) {
+    if (!groups.length) { groups.push([s]); continue; }
+    const avg = (g) => g.reduce((x, m) => x + m.score, 0) / g.length;
+    let best = 0, bestKey = null;
+    groups.forEach((g, gi) => {
+      const sameG = sameGender ? (g.every((m) => m.gender === s.gender) ? 0 : 1) : 0;
+      const key = [g.length >= 3 ? 1 : 0, sameG, Math.abs(avg(g) - s.score)];
+      if (!bestKey || key[0] < bestKey[0] || (key[0] === bestKey[0] && (key[1] < bestKey[1] || (key[1] === bestKey[1] && key[2] < bestKey[2])))) { best = gi; bestKey = key; }
+    });
+    groups[best].push(s);
+  }
+  return groups.map((g) => g.map((m) => m.id));
+}
+// 팀 주장: 리더십 득표 최다(1표 이상) → 동점이면 점수 높은 학생 → 그래도 같으면 무작위
+function pickCaptain(memberIds, byId) {
+  const list = shuffle(memberIds.map((id) => byId[id]).filter(Boolean)).filter((s) => (s.votes || 0) > 0);
+  if (!list.length) return null;
+  list.sort((a, b) => (b.votes - a.votes) || (b.score - a.score));
+  return list[0].id;
+}
+// 이름 명단 해석 + 동명이인 번호 붙이기
+function parseGender(t) {
+  const x = String(t).trim().toLowerCase();
+  if (["남", "남자", "m", "male", "boy"].includes(x)) return "M";
+  if (["여", "여자", "f", "female", "girl"].includes(x)) return "F";
+  return null;
+}
+function parseRoster(text) {
+  const rows = [], errors = [];
+  String(text || "").split(/\r?\n/).forEach((line, i) => {
+    const t = line.trim();
+    if (!t) return;
+    const parts = t.split(/\s+/);
+    const g = parts.length >= 2 ? parseGender(parts[parts.length - 1]) : null;
+    const name = parts.slice(0, -1).join(" ");
+    if (!g || !name) { errors.push(i + 1); return; }
+    rows.push({ name, gender: g });
+  });
+  const count = {};
+  rows.forEach((r) => (count[r.name] = (count[r.name] || 0) + 1));
+  const used = new Set(rows.filter((r) => count[r.name] === 1).map((r) => r.name));
+  const next = {};
+  rows.forEach((r) => {
+    if (count[r.name] > 1) {
+      const base = r.name;
+      let k = next[base] || 1, nm = base + k;
+      while (used.has(nm)) { k++; nm = base + k; }
+      next[base] = k + 1; used.add(nm); r.name = nm;
+    }
+  });
+  return { rows, errors };
+}
+// 평가 데이터 → 학생별 최종 점수 계산
+function computeScores(ses, subs) {
+  const ov = ses.overrides || {}, ab = ses.absent || {};
+  const votes = {}, received = {};
+  if (ses.mode === "peer") {
+    Object.entries(subs).forEach(([rid, sub]) => {
+      if (!sub || !sub.done) return;
+      Object.entries(sub.ratings || {}).forEach(([tid, sc]) => { (received[tid] = received[tid] || []).push(Number(sc)); });
+      (sub.votes || []).forEach((v) => (votes[v] = (votes[v] || 0) + 1));
+    });
+  }
+  const list = ses.students.map((st) => {
+    const sub = subs[st.id];
+    let submitted, base = null, rc = 0;
+    if (ses.mode === "peer") {
+      submitted = !!(sub && sub.done);
+      const r = received[st.id] || [];
+      rc = r.length;
+      if (rc) base = Math.round((r.reduce((a, b) => a + b, 0) / rc) * 10) / 10;
+    } else {
+      submitted = !!(sub && sub.score != null);
+      if (submitted) base = Number(sub.score);
+    }
+    const teacher = ov[st.id] != null;
+    return {
+      ...st, submitted, received: rc, claimed: !!sub, votes: votes[st.id] || 0,
+      teacher, absent: !!ab[st.id], score: teacher ? Number(ov[st.id]) : base
+    };
+  });
+  const active = list.filter((s) => !s.absent);
+  return {
+    list, active,
+    submittedCount: active.filter((s) => s.submitted).length,
+    allScored: active.length > 0 && active.every((s) => s.score != null),
+    allDone: active.length > 0 && active.every((s) => s.submitted || s.teacher)
+  };
+}
+// ===ALGO END===
+
+// ---------------------------------------------------------------------
+// 상태
+// ---------------------------------------------------------------------
+const S = {
+  screen: "home",
+  setup: { classId: "", className: "", rosterText: "", templateId: "", title: "", criteria: ["", "", "", ""], mode: "self", peerCount: 4 },
+  classes: [], templates: [], sessions: [],
+  sid: null, session: null, subs: {}, unsubs: [],
+  T: null,
+  st: { code: "", sid: null, session: null, subs: {}, me: null, draft: {}, step: 0, phase: "rate", votes: [], unsubs: [] }
+};
+window.S = S;
+
+function clearSubs(arr) { arr.forEach((u) => { try { u(); } catch (e) {} }); arr.length = 0; }
+function go(screen) { S.screen = screen; closeModal(); render(); window.scrollTo(0, 0); }
+function teacherOK() { return ls("pe_teacher_pin") === TEACHER_PIN; }
+
+// ---------------------------------------------------------------------
+// 화면 그리기
+// ---------------------------------------------------------------------
+function topbar(extra = "") {
+  return `<div class="topbar"><div class="logo"><div class="ball">🏐</div>${esc(APP_NAME)}</div><div class="row">${extra}</div></div>`;
+}
+function render() {
+  const fn = VIEWS[S.screen] || VIEWS.home;
+  app.innerHTML = fn();
+  if (S.screen === "live") drawQR();
+}
+const VIEWS = {};
+
+// 첫 화면 -------------------------------------------------------------
+VIEWS.home = () => `
+  <div class="center-box">
+    <div class="big-emoji">🏐</div>
+    <div class="s-title">${esc(APP_NAME)}</div>
+    <div class="s-sub">실력과 성별이 고르게 섞인 팀을 만들어요</div>
+    <div style="display:grid;gap:12px;margin-top:26px">
+      <button class="btn main big" onclick="A.goJoin()">🙋 학생으로 입장하기</button>
+      <button class="btn big ghost" onclick="A.goTeacher()">🧑‍🏫 교사로 시작하기</button>
+    </div>
+  </div>`;
+
+// 교사 PIN ------------------------------------------------------------
+VIEWS.pin = () => `
+  <div class="center-box">
+    <div class="big-emoji">🔒</div>
+    <div class="s-title">교사 PIN 입력</div>
+    <div class="s-sub">숫자 4자리를 입력하세요</div>
+    <input id="pinInput" class="code-input" type="password" inputmode="numeric" maxlength="4" autocomplete="off"
+      onkeyup="if(this.value.length===4)A.checkPin(this.value)">
+    <div style="margin-top:18px"><button class="btn ghost" onclick="A.go('home')">← 처음으로</button></div>
+  </div>`;
+
+// 교사 대시보드 -------------------------------------------------------
+VIEWS.dash = () => {
+  const items = S.sessions.map((s) => {
+    const n = (s.students || []).length - Object.keys(s.absent || {}).length;
+    const st = s.status === "open"
+      ? `<span class="tag orange">진행 중 · 방 ${esc(s.code)}</span>`
+      : `<span class="tag green">완료</span>`;
+    const btns = s.status === "open"
+      ? `<button class="btn sm main" onclick="A.enterLive('${s.id}')">이어서 진행</button>`
+      : `${s.final ? `<button class="btn sm main" onclick="A.loadForTeam('${s.id}')">팀 다시 편성</button>` : ""}
+         ${s.result ? `<button class="btn sm blue" onclick="A.viewSavedResult('${s.id}')">저장된 결과</button>` : ""}`;
+    return `<div class="list-item">
+      <div class="grow"><div style="font-weight:800">${esc(s.title)} <span class="tag ${s.mode === "peer" ? "blue" : "gray"}">${s.mode === "peer" ? "동료평가" : "자기평가"}</span> ${st}</div>
+      <div class="muted">${fmtDateTime(s.createdAt)} · ${esc(s.className || "학급 미지정")} · ${n}명</div></div>
+      ${btns}<button class="btn sm danger" onclick="A.deleteSession('${s.id}')">삭제</button></div>`;
+  }).join("");
+  return `<div class="wrap">${topbar(`<button class="btn sm ghost" onclick="A.logout()">로그아웃</button>`)}
+    <div class="grid2">
+      <div class="card"><h2>✨ 새 평가 시작</h2><p class="muted">명단 → 평가 기준 → 방 열기 순서로 진행해요. 학생은 QR 코드나 방 코드로 들어와요.</p>
+        <div style="margin-top:16px"><button class="btn main big" onclick="A.newEval()">새 평가 만들기</button></div></div>
+      <div class="card"><h2>📂 이전 평가 불러오기</h2><p class="muted">아래 목록에서 완료된 평가의 <b>[팀 다시 편성]</b>을 누르면 학생 평가 없이 바로 팀을 짜요. 오늘 결석생은 출석 체크에서 뺄 수 있어요.</p></div>
+    </div>
+    <div class="card"><h3>평가 기록</h3>${items || `<div class="empty">아직 평가 기록이 없어요.</div>`}</div>
+  </div>`;
+};
+
+// 1단계: 명단 --------------------------------------------------------
+VIEWS.setup1 = () => {
+  const p = parseRoster(S.setup.rosterText);
+  const opts = S.classes.map((c) => `<option value="${c.id}" ${c.id === S.setup.classId ? "selected" : ""}>${esc(c.name)} (${(c.students || []).length}명)</option>`).join("");
+  const m = p.rows.filter((r) => r.gender === "M").length;
+  return `<div class="wrap">${topbar(`<button class="btn sm ghost" onclick="A.toDash()">← 대시보드</button>`)}
+    <div class="steps"><span class="on">1. 학생 명단</span><span>2. 평가 기준</span><span>3. 평가 진행</span><span>4. 팀 편성</span></div>
+    <div class="grid2">
+      <div class="card"><h3>저장된 학급 명단</h3>
+        <div class="row"><select class="grow" onchange="A.pickClass(this.value)"><option value="">— 선택하세요 —</option>${opts}</select>
+        ${S.setup.classId ? `<button class="btn sm danger" onclick="A.deleteClass()">삭제</button>` : ""}</div>
+        <label class="lb">학급 이름</label>
+        <input type="text" placeholder="예: 6학년 3반" value="${esc(S.setup.className)}" oninput="S.setup.className=this.value">
+        <div class="row" style="margin-top:12px"><button class="btn" onclick="A.saveClass()">💾 이 명단 저장하기</button></div>
+        <p class="muted" style="margin-top:14px">• 한 줄에 한 명씩 <b>이름 성별</b>로 적어요. 성별은 <b>남/여</b><br>• 이름이 같은 학생은 자동으로 민준1, 민준2처럼 번호가 붙어요.</p>
+      </div>
+      <div class="card"><h3>학생 명단 입력</h3>
+        <textarea rows="14" placeholder="다온 여&#10;규아 여&#10;민구 남" oninput="S.setup.rosterText=this.value;A.rosterPreview()">${esc(S.setup.rosterText)}</textarea>
+        <div id="rosterInfo" class="muted" style="margin-top:8px">${rosterInfo(p, m)}</div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn main big" onclick="A.toSetup2()">다음: 평가 기준 →</button></div>
+  </div>`;
+};
+function rosterInfo(p, m) {
+  let s = `총 <b>${p.rows.length}명</b> (남 ${m} · 여 ${p.rows.length - m})`;
+  if (p.errors.length) s += ` · <span style="color:#b91c1c;font-weight:700">형식 오류: ${p.errors.join(", ")}번째 줄</span>`;
+  const renamed = p.rows.filter((r) => /\d$/.test(r.name)).map((r) => r.name);
+  if (renamed.length) s += `<br>번호 붙은 이름: ${esc(renamed.join(", "))}`;
+  return s;
+}
+
+// 2단계: 평가 기준 ----------------------------------------------------
+VIEWS.setup2 = () => {
+  const su = S.setup;
+  const opts = S.templates.map((t) => `<option value="${t.id}" ${t.id === su.templateId ? "selected" : ""}>${esc(t.title)}</option>`).join("");
+  const crit = [0, 1, 2, 3].map((i) => `<div class="crit"><b>${i + 1}점</b><input type="text" value="${esc(su.criteria[i])}" placeholder="${i + 1}점 기준" oninput="S.setup.criteria[${i}]=this.value"></div>`).join("");
+  return `<div class="wrap">${topbar(`<button class="btn sm ghost" onclick="A.toDash()">← 대시보드</button>`)}
+    <div class="steps"><span>1. 학생 명단</span><span class="on">2. 평가 기준</span><span>3. 평가 진행</span><span>4. 팀 편성</span></div>
+    <div class="grid2">
+      <div class="card"><h3>평가 기준 만들기</h3>
+        <label class="lb">평가 제목</label><input type="text" placeholder="예: 피구 평가" value="${esc(su.title)}" oninput="S.setup.title=this.value">
+        <label class="lb">점수 기준 (1점 → 4점)</label>${crit}
+      </div>
+      <div>
+        <div class="card"><h3>종목별 템플릿</h3>
+          <div class="row"><select class="grow" onchange="A.pickTemplate(this.value)"><option value="">— 불러올 템플릿 —</option>${opts}</select>
+          ${su.templateId ? `<button class="btn sm danger" onclick="A.deleteTemplate()">삭제</button>` : ""}</div>
+          <div style="margin-top:10px"><button class="btn" onclick="A.saveTemplate()">💾 현재 기준을 템플릿으로 저장</button></div>
+        </div>
+        <div class="card"><h3>평가 방식</h3>
+          <div class="seg"><button class="${su.mode === "self" ? "on" : ""}" onclick="S.setup.mode='self';A.render()">🙋 개별 평가(자기평가)</button>
+          <button class="${su.mode === "peer" ? "on" : ""}" onclick="S.setup.mode='peer';A.render()">👥 동료 평가</button></div>
+          ${su.mode === "peer" ? `<label class="lb">한 학생이 평가할 친구 수</label>
+            <div class="seg">${[3, 4, 5].map((k) => `<button class="${su.peerCount === k ? "on" : ""}" onclick="S.setup.peerCount=${k};A.render()">${k}명</button>`).join("")}</div>
+            <p class="muted" style="margin-top:8px">모든 학생이 똑같이 ${su.peerCount}번씩 평가받도록 자동 배정돼요. 평가가 끝나면 리더십이 좋은 친구 2명에게 투표해요.</p>`
+            : `<p class="muted" style="margin-top:10px">학생이 자기 이름 카드를 누르고 자기 점수를 골라요.</p>`}
+        </div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+      <button class="btn big ghost" onclick="A.go('setup1')">← 명단</button>
+      <button class="btn main big" onclick="A.openRoom()">🚪 평가 방 열기</button></div>
+  </div>`;
+};
+
+// 3단계: 실시간 현황 --------------------------------------------------
+VIEWS.live = () => {
+  const ses = S.session;
+  if (!ses) return `<div class="center-box"><div class="big-emoji">⏳</div>불러오는 중…</div>`;
+  const r = computeScores(ses, S.subs);
+  const total = r.active.length;
+  const pct = total ? Math.round((r.submittedCount / total) * 100) : 0;
+  const cards = r.list.map((s) => {
+    let cls = "", st = "";
+    if (s.absent) { cls = "absent"; st = "결석"; }
+    else if (s.teacher) { cls = "teacher"; st = `교사 입력 ${fmtScore(s.score)}점`; }
+    else if (ses.mode === "peer") {
+      if (s.submitted) cls = "done";
+      else if (s.score == null) cls = "need";
+      st = `${s.submitted ? "✅ 평가 완료" : s.claimed ? "✏️ 평가 중" : "⏳ 대기"}<br>받은 평가 ${s.received}개 · ${fmtScore(s.score)}점 · 🗳${s.votes}`;
+    } else {
+      if (s.submitted) { cls = "done"; st = `✅ ${fmtScore(s.score)}점`; } else st = "⏳ 미제출";
+    }
+    return `<button class="stu ${cls}" onclick="A.studentMenu('${s.id}')"><div class="nm">${esc(s.name)} <span class="muted">${gLabel(s.gender)}</span></div><div class="st">${st}</div></button>`;
+  }).join("");
+  const missing = r.active.filter((s) => !s.submitted && !s.teacher).map((s) => s.name);
+  const noScore = r.active.filter((s) => s.score == null).map((s) => s.name);
+  let banner;
+  if (r.allDone && r.allScored) {
+    banner = `<div class="banner"><span>🎉 모든 학생 평가가 완료되었습니다. (자동 저장됨)</span><button class="btn big" style="background:#fff;color:var(--main-dark)" onclick="A.toTeamFromLive()">팀 편성하기 →</button></div>`;
+  } else if (r.allScored) {
+    banner = `<div class="banner wait"><span>아직 평가 중인 학생: ${esc(missing.join(", "))}<br>지금 마감해도 모든 학생의 점수가 있어서 팀을 짤 수 있어요.</span><button class="btn main" onclick="A.toTeamFromLive()">평가 마감하고 팀 편성</button></div>`;
+  } else {
+    banner = `<div class="banner wait"><span>${ses.mode === "peer" ? `점수가 없는 학생: ${esc(noScore.join(", ")) || "-"}<br>` : ""}미제출: ${esc(missing.join(", ")) || "-"}<br>결석·기기 문제 학생은 이름을 눌러 점수를 직접 입력하거나 결석 처리하세요.</span></div>`;
+  }
+  const url = joinUrl(ses.code);
+  return `<div class="wrap">${topbar(`<button class="btn sm ghost" onclick="A.toDash()">← 대시보드</button>`)}
+    <div class="steps"><span>1. 학생 명단</span><span>2. 평가 기준</span><span class="on">3. 평가 진행</span><span>4. 팀 편성</span></div>
+    <div class="card live-head">
+      <div class="qrbox"><div id="qr"></div></div>
+      <div><div class="muted">${esc(ses.title)} · ${ses.mode === "peer" ? "동료 평가" : "개별 평가"}</div>
+        <div style="margin:8px 0 4px;font-weight:700">방 코드</div><div class="code">${esc(ses.code)}</div>
+        <div class="muted" style="margin-top:10px;word-break:break-all">${esc(url)}</div>
+        <div style="margin-top:16px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><b>제출 ${r.submittedCount} / ${total}명</b><b>${pct}%</b></div><div class="bar"><i style="width:${pct}%"></i></div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px">${banner}</div>
+    <div class="card"><h3>학생 현황 <span class="muted">(이름을 누르면 점수 입력·결석 처리)</span></h3><div class="stu-grid">${cards}</div></div>
+  </div>`;
+};
+function joinUrl(code) { return location.origin + location.pathname + "?room=" + code; }
+function drawQR() {
+  const el = document.getElementById("qr");
+  if (!el || !S.session) return;
+  el.innerHTML = "";
+  if (window.QRCode) new QRCode(el, { text: joinUrl(S.session.code), width: 180, height: 180 });
+  else el.textContent = "QR 라이브러리를 불러오지 못했어요";
+}
+
+// 출석 체크(이전 평가 불러오기) ---------------------------------------
+VIEWS.attend = () => {
+  const T = S.T;
+  const rows = T.all.map((s) => `<label><input type="checkbox" ${T.present[s.id] ? "checked" : ""} onchange="A.togglePresent('${s.id}',this.checked)">
+      <span style="font-weight:700">${esc(s.name)}</span><span class="muted">${gLabel(s.gender)}</span>
+      <select onchange="A.setTScore('${s.id}',this.value)"><option value="">점수</option>${[1, 2, 3, 4].map((v) => `<option ${s.score === v ? "selected" : ""}>${v}</option>`).join("")}${s.score != null && !Number.isInteger(s.score) ? `<option selected>${s.score}</option>` : ""}</select></label>`).join("");
+  const cnt = T.all.filter((s) => T.present[s.id]).length;
+  return `<div class="wrap">${topbar(`<button class="btn sm ghost" onclick="A.toDash()">← 대시보드</button>`)}
+    <div class="card"><h2>✅ 오늘 출석 체크</h2><p class="muted">${esc(T.title)} 평가 결과를 불러왔어요. 오늘 결석한 학생은 체크를 해제하세요. (점수는 필요하면 바꿀 수 있어요)</p></div>
+    <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><b>출석 ${cnt}명</b>
+      <div class="row"><button class="btn sm" onclick="A.allPresent(true)">모두 출석</button><button class="btn sm" onclick="A.allPresent(false)">모두 해제</button></div></div>
+      <div class="att">${rows}</div></div>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn main big" onclick="A.attendDone()">팀 편성으로 →</button></div>
+  </div>`;
+};
+
+// 4단계: 팀 편성 ------------------------------------------------------
+function teamName(t, kind) {
+  if (kind === "pair") return `${t.pairNo}조`;
+  return `${t.tag ? t.tag + " " : ""}${COLORS[t.color % COLORS.length].name}팀`;
+}
+function teamStats(t) {
+  const byId = S.T.byId;
+  const ms = t.members.map((id) => byId[id]).filter(Boolean);
+  const n = ms.length, m = ms.filter((x) => x.gender === "M").length;
+  const avg = n ? ms.reduce((a, x) => a + x.score, 0) / n : 0;
+  const ace = ms.filter((x) => tierOf(x.score) === 4).length;
+  return { n, m, f: n - m, avg: Math.round(avg * 100) / 100, ace };
+}
+function teamCard(t, ti, proj) {
+  const T = S.T, c = COLORS[t.color % COLORS.length];
+  const st = teamStats(t);
+  const mem = t.members.map((id) => {
+    const s = T.byId[id]; if (!s) return "";
+    const isCap = t.captain === id;
+    if (proj) return `<div class="mem"><span class="n">${esc(s.name)}</span>${isCap ? `<span class="cap">주장</span>` : ""}</div>`;
+    return `<div class="mem" draggable="true" ondragstart="A.dragStart(event,'${id}')" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="A.drop(event,${ti},'${id}')">
+      <span class="g ${s.gender}">${gLabel(s.gender)}</span><span class="n">${esc(s.name)}</span>
+      ${isCap ? `<span class="cap">주장</span>` : ""}
+      <span class="sc">${fmtScore(s.score)}</span>
+      <button class="capbtn ${isCap ? "on" : ""}" title="주장 지정" onclick="A.setCaptain(${ti},'${id}')">⭐</button></div>`;
+  }).join("");
+  const stat = proj ? "" : `<div class="team-stat"><span>👥 ${st.n}명 (남${st.m}·여${st.f})</span><span>📊 평균 ${st.avg.toFixed(2)}</span><span>🔥 4점 ${st.ace}명</span></div>`;
+  return `<div class="team" style="border-color:${c.bg}" ${proj ? "" : `ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="A.drop(event,${ti},null)"`}>
+    <div class="team-h" style="background:${c.bg};color:${c.fg}"><span class="nm" ${proj ? "" : `title="눌러서 색 바꾸기" onclick="A.cycleColor(${ti})"`}>${esc(teamName(t, T.kind))}</span>${proj ? "" : `<span style="font-size:12px;opacity:.9">색 바꾸기 ↻</span>`}</div>
+    ${stat}<div class="members">${mem || `<div class="muted" style="padding:10px">여기로 끌어다 놓기</div>`}</div></div>`;
+}
+VIEWS.team = () => {
+  const T = S.T;
+  const present = T.all.filter((s) => T.present[s.id]);
+  const m = present.filter((s) => s.gender === "M").length;
+  let opt = "";
+  if (T.kind === "mixed") opt = `<label class="lb">팀 수</label><div class="seg">${[2, 3, 4].map((k) => `<button class="${T.teamCount === k ? "on" : ""}" onclick="S.T.teamCount=${k};A.render()">${k}팀</button>`).join("")}</div>`;
+  if (T.kind === "gender") opt = `<div class="grid2" style="gap:10px"><div><label class="lb">남자 팀 수 (남 ${m}명)</label><input type="number" min="0" max="8" value="${T.boyTeams}" oninput="S.T.boyTeams=+this.value"></div>
+      <div><label class="lb">여자 팀 수 (여 ${present.length - m}명)</label><input type="number" min="0" max="8" value="${T.girlTeams}" oninput="S.T.girlTeams=+this.value"></div></div>`;
+  if (T.kind === "pair") opt = `<label class="lb">짝 구성</label><div class="seg"><button class="${T.pairSame ? "on" : ""}" onclick="S.T.pairSame=true;A.render()">같은 성별끼리</button><button class="${!T.pairSame ? "on" : ""}" onclick="S.T.pairSame=false;A.render()">다른 성별끼리</button></div>`;
+  const teams = T.teams ? T.teams.map((t, i) => teamCard(t, i, false)).join("") : "";
+  return `<div class="wrap">${topbar(`<button class="btn sm ghost" onclick="A.toDash()">← 대시보드</button>`)}
+    <div class="steps"><span>1. 학생 명단</span><span>2. 평가 기준</span><span>3. 평가 진행</span><span class="on">4. 팀 편성</span></div>
+    <div class="card"><div class="row" style="justify-content:space-between"><div><h2>${esc(T.title)}</h2><div class="muted">참여 ${present.length}명 (남 ${m} · 여 ${present.length - m}) · ${T.evalMode === "peer" ? "동료평가(주장 자동 지정)" : "자기평가"}</div></div>
+      ${T.fromLoad ? `<button class="btn sm" onclick="A.go('attend')">출석 다시 체크</button>` : ""}</div>
+      <label class="lb">편성 방식</label>
+      <div class="seg"><button class="${T.kind === "mixed" ? "on" : ""}" onclick="S.T.kind='mixed';A.render()">⚖️ 섞어서 나누기</button>
+        <button class="${T.kind === "gender" ? "on" : ""}" onclick="S.T.kind='gender';A.render()">🚹🚺 남자팀·여자팀</button>
+        <button class="${T.kind === "pair" ? "on" : ""}" onclick="S.T.kind='pair';A.render()">🤝 짝 만들기</button></div>
+      ${opt}
+      <div class="row" style="margin-top:16px"><button class="btn main big" onclick="A.makeTeams()">${T.teams ? "🔀 다시 편성" : "⚡ 팀 편성하기"}</button>
+      ${T.teams ? `<button class="btn big blue" onclick="A.projector(true)">📺 칠판 투사 모드</button><button class="btn big" onclick="A.exportXlsx()">📥 엑셀 다운로드</button><span class="muted">${T.saved ? "✔ 결과 저장됨" : "저장 중…"}</span>` : ""}</div>
+      ${T.teams ? `<p class="muted" style="margin-top:10px">💡 학생을 끌어서 다른 팀(또는 다른 학생 위)에 놓으면 이동·교체돼요. ⭐로 주장, 팀 이름을 눌러 색을 바꿔요.</p>` : ""}
+    </div>
+    <div class="teams">${teams}</div>
+    ${T.projector ? projView() : ""}
+  </div>`;
+};
+function projView() {
+  const T = S.T;
+  return `<div class="proj"><div class="row" style="justify-content:space-between;margin-bottom:20px">
+    <div style="color:#fff;font-size:30px;font-weight:900">${esc(T.title)}</div>
+    <button class="btn big" onclick="A.projector(false)">✕ 닫기</button></div>
+    <div class="teams">${T.teams.map((t, i) => teamCard(t, i, true)).join("")}</div></div>`;
+}
+
+// 학생 화면 -----------------------------------------------------------
+VIEWS.join = () => `
+  <div class="center-box">
+    <div class="big-emoji">🙋</div>
+    <div class="s-title">방 코드 입력</div>
+    <div class="s-sub">선생님 화면의 숫자 4자리를 입력해요</div>
+    <input id="codeInput" class="code-input" type="text" inputmode="numeric" maxlength="4" value="${esc(S.st.code)}" autocomplete="off"
+      onkeyup="if(this.value.length===4)A.joinRoom(this.value)">
+    <div style="margin-top:16px"><button class="btn main big" onclick="A.joinRoom(document.getElementById('codeInput').value)">입장하기</button></div>
+    <div style="margin-top:12px"><button class="btn ghost" onclick="A.go('home')">← 처음으로</button></div>
+  </div>`;
+
+VIEWS.student = () => {
+  const st = S.st, ses = st.session;
+  if (!ses) return `<div class="center-box"><div class="big-emoji">⏳</div>불러오는 중…</div>`;
+  const me = st.me ? ses.students.find((s) => s.id === st.me) : null;
+  const mySub = st.me ? (st.subs[st.me] || (Date.now() - (st.claimAt || 0) < 8000 ? { claimed: true } : null)) : null;
+  const head = `<div class="s-title">${esc(ses.title)}</div>`;
+  const doneView = () => `<div class="center-box"><div class="big-emoji">🎉</div><div class="s-title">${esc(me ? me.name : "")} 제출 완료!</div><div class="s-sub">선생님이 팀을 만들 때까지 기다려 주세요.</div></div>`;
+
+  if (ses.mode === "self") {
+    if (me && mySub && mySub.score != null) return doneView();
+    if (ses.status !== "open") return closedView();
+    const ov = ses.overrides || {}, ab = ses.absent || {};
+    const cards = ses.students.map((s) => {
+      const off = ab[s.id] || ov[s.id] != null || (st.subs[s.id] && st.subs[s.id].score != null);
+      return `<button class="name-card" ${off ? "disabled" : ""} onclick="A.selfPick('${s.id}')">${esc(s.name)}${off ? " ✔" : ""}</button>`;
+    }).join("");
+    return `<div class="s-wrap">${head}<div class="s-sub">👇 내 이름을 눌러 주세요</div><div class="name-grid">${cards}</div></div>`;
+  }
+  // 동료 평가
+  if (me && mySub && mySub.done) return doneView();
+  if (ses.status !== "open") return closedView();
+  if (!me || !mySub) {
+    const ab = ses.absent || {};
+    const cards = ses.students.map((s) => {
+      const off = ab[s.id] || !!st.subs[s.id];
+      return `<button class="name-card" ${off ? "disabled" : ""} onclick="A.peerClaim('${s.id}')">${esc(s.name)}</button>`;
+    }).join("");
+    return `<div class="s-wrap">${head}<div class="s-sub">👇 먼저 <b>내 이름</b>을 눌러 주세요</div><div class="name-grid">${cards}</div></div>`;
+  }
+  const targets = peerTargets();
+  if (st.phase === "vote" || !targets.length) return voteView(me);
+  const idx = Math.min(st.step, targets.length - 1);
+  const tgt = ses.students.find((s) => s.id === targets[idx]);
+  const cur = st.draft[tgt.id];
+  const btns = ses.criteria.map((c, i) => `<button class="score-btn ${cur === i + 1 ? "on" : ""}" onclick="A.rate('${tgt.id}',${i + 1})"><b>${i + 1}점</b><span>${esc(c)}</span></button>`).join("");
+  return `<div class="s-wrap" style="max-width:720px">${head}
+    <div class="s-sub">${esc(me.name)} · 친구 평가 ${idx + 1} / ${targets.length}</div>
+    <div class="bar" style="margin-bottom:18px"><i style="width:${Math.round((idx / targets.length) * 100)}%"></i></div>
+    <div class="card" style="text-align:center;margin-bottom:14px"><div class="muted">이 친구는 어느 정도일까요?</div><div style="font-size:40px;font-weight:900;margin-top:6px">${esc(tgt.name)}</div></div>
+    ${btns}
+    ${idx > 0 ? `<button class="btn ghost big" onclick="S.st.step--;A.saveDraft();A.render()">← 이전 친구</button>` : ""}
+  </div>`;
+};
+function peerTargets() {
+  const st = S.st, ses = st.session, ab = ses.absent || {};
+  return ((ses.assign || {})[st.me] || []).filter((id) => !ab[id]);
+}
+function voteView(me) {
+  const st = S.st, ses = st.session, ab = ses.absent || {};
+  const cands = ses.students.filter((s) => s.id !== me.id && !ab[s.id]);
+  const need = Math.min(2, cands.length);
+  const cards = cands.map((s) => `<button class="name-card ${st.votes.includes(s.id) ? "sel" : ""}" onclick="A.toggleVote('${s.id}')">${esc(s.name)}</button>`).join("");
+  const hasTargets = peerTargets().length > 0;
+  return `<div class="s-wrap"><div class="s-title">🗳 리더십 투표</div>
+    <div class="s-sub">우리 반에서 <b>리더십이 가장 좋은 친구 ${need}명</b>을 골라 주세요 (${st.votes.length}/${need})</div>
+    <div class="name-grid">${cards}</div>
+    <div class="row" style="justify-content:center;margin-top:22px;gap:12px">
+      ${hasTargets ? `<button class="btn ghost big" onclick="S.st.phase='rate';A.saveDraft();A.render()">← 평가로 돌아가기</button>` : ""}
+      <button class="btn main big" ${st.votes.length === need ? "" : "disabled"} onclick="A.peerSubmit()">제출하기</button></div></div>`;
+}
+function closedView() {
+  return `<div class="center-box"><div class="big-emoji">🔒</div><div class="s-title">평가가 마감되었어요</div><div class="s-sub">선생님 화면을 봐 주세요.</div></div>`;
+}
+
+// ---------------------------------------------------------------------
+// 동작(버튼) ─ 교사
+// ---------------------------------------------------------------------
+const A = {
+  render, go, closeModal,
+  goTeacher() { if (teacherOK()) A.toDash(); else { go("pin"); setTimeout(() => document.getElementById("pinInput")?.focus(), 50); } },
+  checkPin(v) {
+    if (v === TEACHER_PIN) { ls("pe_teacher_pin", TEACHER_PIN); A.toDash(); }
+    else { toast("PIN이 맞지 않아요"); const el = document.getElementById("pinInput"); if (el) el.value = ""; }
+  },
+  logout() { ls("pe_teacher_pin", null); ls("pe_t_view", null); clearSubs(S.unsubs); go("home"); },
+
+  async toDash() {
+    clearSubs(S.unsubs); S.session = null; S.sid = null; ls("pe_t_view", null);
+    go("dash");
+    try {
+      const snap = await getDocs(query(collection(db, C_SESS), orderBy("createdAt", "desc"), limit(60)));
+      S.sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (S.screen === "dash") render();
+    } catch (e) { fail(e); }
+  },
+  async newEval() {
+    S.setup = { classId: "", className: "", rosterText: "", templateId: "", title: "", criteria: ["", "", "", ""], mode: "self", peerCount: 4 };
+    go("setup1");
+    try {
+      const [c, t] = await Promise.all([getDocs(collection(db, C_CLASSES)), getDocs(collection(db, C_TPL))]);
+      S.classes = c.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name, "ko"));
+      S.templates = t.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.title.localeCompare(b.title, "ko"));
+      render();
+    } catch (e) { fail(e); }
+  },
+  rosterPreview() {
+    const p = parseRoster(S.setup.rosterText);
+    const el = document.getElementById("rosterInfo");
+    if (el) el.innerHTML = rosterInfo(p, p.rows.filter((r) => r.gender === "M").length);
+  },
+  pickClass(id) {
+    const c = S.classes.find((x) => x.id === id);
+    S.setup.classId = id;
+    if (c) { S.setup.className = c.name; S.setup.rosterText = (c.students || []).map((s) => `${s.name} ${gLabel(s.gender)}`).join("\n"); }
+    render();
+  },
+  async saveClass() {
+    const name = S.setup.className.trim();
+    const p = parseRoster(S.setup.rosterText);
+    if (!name) return toast("학급 이름을 입력해 주세요");
+    if (!p.rows.length || p.errors.length) return toast("명단을 확인해 주세요");
+    try {
+      const data = { name, students: p.rows, updatedAt: Date.now() };
+      const same = S.classes.find((c) => c.id === S.setup.classId) || S.classes.find((c) => c.name === name);
+      if (same) { await setDoc(doc(db, C_CLASSES, same.id), data); Object.assign(same, data); S.setup.classId = same.id; }
+      else { const r = await addDoc(collection(db, C_CLASSES), data); S.classes.push({ id: r.id, ...data }); S.setup.classId = r.id; }
+      toast("명단을 저장했어요"); render();
+    } catch (e) { fail(e); }
+  },
+  async deleteClass() {
+    const c = S.classes.find((x) => x.id === S.setup.classId);
+    if (!c || !confirm(`'${c.name}' 명단을 삭제할까요?`)) return;
+    try { await deleteDoc(doc(db, C_CLASSES, c.id)); S.classes = S.classes.filter((x) => x.id !== c.id); S.setup.classId = ""; render(); toast("삭제했어요"); } catch (e) { fail(e); }
+  },
+  toSetup2() {
+    const p = parseRoster(S.setup.rosterText);
+    if (p.errors.length) return toast(`${p.errors.join(", ")}번째 줄 형식을 확인해 주세요 (예: 다온 여)`);
+    if (p.rows.length < 2) return toast("학생을 2명 이상 입력해 주세요");
+    go("setup2");
+  },
+  pickTemplate(id) {
+    const t = S.templates.find((x) => x.id === id);
+    S.setup.templateId = id;
+    if (t) { S.setup.title = t.title; S.setup.criteria = [...t.criteria]; }
+    render();
+  },
+  async saveTemplate() {
+    const su = S.setup, title = su.title.trim();
+    if (!title || su.criteria.some((c) => !c.trim())) return toast("제목과 1~4점 기준을 모두 입력해 주세요");
+    try {
+      const data = { title, criteria: su.criteria.map((c) => c.trim()), updatedAt: Date.now() };
+      const same = S.templates.find((t) => t.title === title);
+      if (same) { await setDoc(doc(db, C_TPL, same.id), data); Object.assign(same, data); su.templateId = same.id; }
+      else { const r = await addDoc(collection(db, C_TPL), data); S.templates.push({ id: r.id, ...data }); su.templateId = r.id; }
+      toast("템플릿을 저장했어요"); render();
+    } catch (e) { fail(e); }
+  },
+  async deleteTemplate() {
+    const t = S.templates.find((x) => x.id === S.setup.templateId);
+    if (!t || !confirm(`'${t.title}' 템플릿을 삭제할까요?`)) return;
+    try { await deleteDoc(doc(db, C_TPL, t.id)); S.templates = S.templates.filter((x) => x.id !== t.id); S.setup.templateId = ""; render(); } catch (e) { fail(e); }
+  },
+  async openRoom() {
+    const su = S.setup;
+    if (!su.title.trim() || su.criteria.some((c) => !c.trim())) return toast("제목과 1~4점 기준을 모두 입력해 주세요");
+    const p = parseRoster(su.rosterText);
+    const students = p.rows.map((r, i) => ({ id: "s" + (i + 1), name: r.name, gender: r.gender }));
+    try {
+      let code = null;
+      for (let k = 0; k < 30 && !code; k++) {
+        const c = String(1000 + Math.floor(Math.random() * 9000));
+        const snap = await getDoc(doc(db, C_CODES, c));
+        if (!snap.exists() || Date.now() - (snap.data().at || 0) > 12 * 3600 * 1000) code = c;
+      }
+      if (!code) return toast("방 코드를 만들지 못했어요. 다시 시도해 주세요");
+      const data = {
+        code, title: su.title.trim(), criteria: su.criteria.map((c) => c.trim()), mode: su.mode, peerCount: su.peerCount,
+        className: su.className.trim(), students, assign: su.mode === "peer" ? makeAssign(students.map((s) => s.id), su.peerCount) : {},
+        overrides: {}, absent: {}, status: "open", createdAt: Date.now()
+      };
+      const ref = await addDoc(collection(db, C_SESS), data);
+      await setDoc(doc(db, C_CODES, code), { sid: ref.id, at: Date.now() });
+      A.enterLive(ref.id);
+    } catch (e) { fail(e); }
+  },
+  enterLive(sid) {
+    clearSubs(S.unsubs);
+    S.sid = sid; S.session = null; S.subs = {};
+    ls("pe_t_view", { sid, screen: "live" });
+    go("live");
+    S.unsubs.push(onSnapshot(doc(db, C_SESS, sid), (snap) => {
+      if (!snap.exists()) { toast("평가가 삭제되었어요"); return A.toDash(); }
+      S.session = { id: sid, ...snap.data() };
+      autoSaveFinal();
+      if (S.screen === "live") render();
+    }, fail));
+    S.unsubs.push(onSnapshot(collection(db, C_SESS, sid, "subs"), (qs) => {
+      const subs = {}; qs.forEach((d) => (subs[d.id] = d.data()));
+      S.subs = subs;
+      autoSaveFinal();
+      if (S.screen === "live") render();
+    }, fail));
+  },
+  studentMenu(id) {
+    const r = computeScores(S.session, S.subs);
+    const s = r.list.find((x) => x.id === id); if (!s) return;
+    const ses = S.session;
+    showModal(`<h2>${esc(s.name)} <span class="muted">${gLabel(s.gender)}</span></h2>
+      <p class="muted" style="margin-bottom:14px">현재 점수: <b>${fmtScore(s.score)}</b> ${s.teacher ? "(교사 입력)" : ""} ${s.absent ? "· 결석 처리됨" : ""}</p>
+      <h3>점수 직접 입력</h3>
+      ${ses.criteria.map((c, i) => `<button class="score-btn" style="padding:12px;font-size:15px" onclick="A.setOverride('${id}',${i + 1})"><b style="width:44px;height:44px;font-size:18px">${i + 1}</b><span>${esc(c)}</span></button>`).join("")}
+      <div class="row" style="margin-top:6px">
+        ${s.teacher ? `<button class="btn" onclick="A.setOverride('${id}',null)">교사 입력 취소</button>` : ""}
+        <button class="btn ${s.absent ? "main" : "danger"}" onclick="A.toggleAbsent('${id}')">${s.absent ? "결석 취소" : "결석 처리(편성 제외)"}</button>
+        ${s.claimed ? `<button class="btn" onclick="A.resetSub('${id}')">제출 초기화(다시 하기)</button>` : ""}
+        <button class="btn ghost" onclick="A.closeModal()">닫기</button></div>`);
+  },
+  async setOverride(id, v) {
+    try { await updateDoc(doc(db, C_SESS, S.sid), { [`overrides.${id}`]: v == null ? deleteField() : v }); closeModal(); } catch (e) { fail(e); }
+  },
+  async toggleAbsent(id) {
+    const now = !!(S.session.absent || {})[id];
+    try { await updateDoc(doc(db, C_SESS, S.sid), { [`absent.${id}`]: now ? deleteField() : true }); closeModal(); } catch (e) { fail(e); }
+  },
+  async resetSub(id) {
+    if (!confirm("이 학생의 제출 기록을 지우고 다시 하게 할까요?")) return;
+    try { await deleteDoc(doc(db, C_SESS, S.sid, "subs", id)); closeModal(); } catch (e) { fail(e); }
+  },
+  async toTeamFromLive() {
+    const ses = S.session;
+    const r = computeScores(ses, S.subs);
+    if (!r.allScored) return toast("점수가 없는 학생이 있어요");
+    const final = finalOf(r);
+    try {
+      await updateDoc(doc(db, C_SESS, S.sid), { final, status: "done", closedAt: Date.now() });
+      const cs = await getDoc(doc(db, C_CODES, ses.code));
+      if (cs.exists() && cs.data().sid === S.sid) await deleteDoc(doc(db, C_CODES, ses.code));
+    } catch (e) { return fail(e); }
+    const sesCopy = { ...ses, final, status: "done" };
+    clearSubs(S.unsubs);
+    startTeam(sesCopy, false);
+  },
+  async loadForTeam(sid) {
+    try {
+      const snap = await getDoc(doc(db, C_SESS, sid));
+      if (!snap.exists()) return toast("기록을 찾을 수 없어요");
+      startTeam({ id: sid, ...snap.data() }, true);
+    } catch (e) { fail(e); }
+  },
+  async viewSavedResult(sid) {
+    try {
+      const snap = await getDoc(doc(db, C_SESS, sid));
+      if (!snap.exists()) return toast("기록을 찾을 수 없어요");
+      const ses = { id: sid, ...snap.data() };
+      startTeam(ses, true, true);
+    } catch (e) { fail(e); }
+  },
+  async deleteSession(sid) {
+    const s = S.sessions.find((x) => x.id === sid);
+    if (!confirm(`'${s ? s.title : ""}' 평가 기록을 완전히 삭제할까요?`)) return;
+    try {
+      const subs = await getDocs(collection(db, C_SESS, sid, "subs"));
+      await Promise.all(subs.docs.map((d) => deleteDoc(d.ref)));
+      if (s && s.code) {
+        const cs = await getDoc(doc(db, C_CODES, s.code));
+        if (cs.exists() && cs.data().sid === sid) await deleteDoc(doc(db, C_CODES, s.code));
+      }
+      await deleteDoc(doc(db, C_SESS, sid));
+      S.sessions = S.sessions.filter((x) => x.id !== sid); render(); toast("삭제했어요");
+    } catch (e) { fail(e); }
+  },
+
+  // 출석 체크
+  togglePresent(id, on) { S.T.present[id] = on; render(); },
+  allPresent(on) { S.T.all.forEach((s) => (S.T.present[s.id] = on)); render(); },
+  setTScore(id, v) { const s = S.T.byId[id]; s.score = v === "" ? null : Number(v); },
+  attendDone() {
+    const T = S.T;
+    const noScore = T.all.filter((s) => T.present[s.id] && s.score == null).map((s) => s.name);
+    if (noScore.length) return toast(`점수가 없는 학생: ${noScore.join(", ")}`);
+    if (T.all.filter((s) => T.present[s.id]).length < 2) return toast("출석 학생이 2명 이상이어야 해요");
+    T.teams = null; go("team");
+  },
+
+  // 팀 편성
+  makeTeams() {
+    const T = S.T;
+    const list = T.all.filter((s) => T.present[s.id] && s.score != null);
+    if (list.length < 2) return toast("학생이 2명 이상 필요해요");
+    let teams = [];
+    if (T.kind === "mixed") {
+      teams = makeMixedTeams(list, T.teamCount).map((m, i) => ({ members: m, color: i, tag: "" }));
+    } else if (T.kind === "gender") {
+      const nb = Math.max(0, Math.floor(T.boyTeams || 0)), ng = Math.max(0, Math.floor(T.girlTeams || 0));
+      if (nb + ng < 1) return toast("팀 수를 입력해 주세요");
+      const r = makeGenderTeams(list, nb, ng);
+      let c = 0;
+      teams = [...r.boys.map((m) => ({ members: m, color: c++, tag: "남자" })), ...r.girls.map((m) => ({ members: m, color: c++, tag: "여자" }))];
+      if (list.some((s) => s.gender === "M") && !nb) toast("남자 팀 수가 0이라 남학생이 빠졌어요");
+      if (list.some((s) => s.gender === "F") && !ng) toast("여자 팀 수가 0이라 여학생이 빠졌어요");
+    } else {
+      teams = makePairs(list, T.pairSame).map((m, i) => ({ members: m, color: i % COLORS.length, tag: "", pairNo: i + 1 }));
+    }
+    teams.forEach((t) => (t.captain = T.evalMode === "peer" && T.kind !== "pair" ? pickCaptain(t.members, T.byId) : null));
+    T.teams = teams; T.resultKind = T.kind;
+    saveResult(); render();
+  },
+  dragStart(ev, id) { ev.dataTransfer.setData("text/plain", id); ev.dataTransfer.effectAllowed = "move"; },
+  drop(ev, ti, targetId) {
+    ev.preventDefault(); ev.stopPropagation();
+    document.querySelectorAll(".over").forEach((x) => x.classList.remove("over"));
+    const id = ev.dataTransfer.getData("text/plain");
+    const T = S.T; if (!id || !T.teams) return;
+    const from = T.teams.findIndex((t) => t.members.includes(id));
+    if (from < 0 || id === targetId) return;
+    const src = T.teams[from], dst = T.teams[ti];
+    if (targetId) {
+      const ai = src.members.indexOf(id), bi = dst.members.indexOf(targetId);
+      if (from === ti) { src.members[ai] = targetId; src.members[bi] = id; }
+      else {
+        src.members[ai] = targetId; dst.members[bi] = id;
+        if (src.captain === id) src.captain = null;
+        if (dst.captain === targetId) dst.captain = null;
+      }
+    } else {
+      if (from === ti) return;
+      src.members = src.members.filter((x) => x !== id); dst.members.push(id);
+      if (src.captain === id) src.captain = null;
+    }
+    saveResult(); render();
+  },
+  setCaptain(ti, id) { const t = S.T.teams[ti]; t.captain = t.captain === id ? null : id; saveResult(); render(); },
+  cycleColor(ti) { const t = S.T.teams[ti]; t.color = (t.color + 1) % COLORS.length; saveResult(); render(); },
+  projector(on) { S.T.projector = on; render(); },
+  exportXlsx() {
+    const T = S.T;
+    if (!window.XLSX) return toast("엑셀 라이브러리를 불러오지 못했어요");
+    const rows = [["팀명(색상)", "이름", "성별", "역할", "평가점수", "팀 평균점수"]];
+    T.teams.forEach((t, i) => {
+      const st = teamStats(t);
+      const nm = T.resultKind === "pair" ? `${t.pairNo}조(${COLORS[t.color % COLORS.length].name})` : teamName(t, T.resultKind);
+      t.members.forEach((id) => {
+        const s = T.byId[id]; if (!s) return;
+        rows.push([nm, s.name, gLabel(s.gender), t.captain === id ? "주장" : "", s.score, st.avg]);
+      });
+      if (i < T.teams.length - 1) rows.push([]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 16 }, { wch: 12 }, { wch: 6 }, { wch: 8 }, { wch: 10 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "팀편성결과");
+    const safe = T.title.replace(/[\\/:*?"<>|]/g, "").trim() || "평가";
+    XLSX.writeFile(wb, `${fmtDate(Date.now())}_${safe}_팀편성결과.xlsx`);
+  },
+
+  // -------------------------------------------------------------------
+  // 학생
+  // -------------------------------------------------------------------
+  goJoin() { go("join"); setTimeout(() => document.getElementById("codeInput")?.focus(), 50); },
+  async joinRoom(code) {
+    code = String(code || "").trim();
+    if (!/^\d{4}$/.test(code)) return toast("숫자 4자리를 입력해 주세요");
+    try {
+      const snap = await getDoc(doc(db, C_CODES, code));
+      if (!snap.exists()) return toast("방을 찾을 수 없어요. 코드를 확인해 주세요");
+      const sid = snap.data().sid;
+      const st = S.st;
+      clearSubs(st.unsubs);
+      const saved = ls("pe_s_" + sid) || {};
+      Object.assign(st, { code, sid, session: null, subs: {}, subsLoaded: false, claimAt: 0, me: saved.me || null, draft: saved.draft || {}, step: saved.step || 0, phase: saved.phase || "rate", votes: saved.votes || [] });
+      ls("pe_s_last", code);
+      history.replaceState(null, "", location.pathname + "?room=" + code);
+      go("student");
+      st.unsubs.push(onSnapshot(doc(db, C_SESS, sid), (d) => {
+        if (!d.exists()) { st.session = { students: [], criteria: [], status: "closed", mode: "self", title: "" }; }
+        else st.session = { id: sid, ...d.data() };
+        studentSync();
+      }, fail));
+      st.unsubs.push(onSnapshot(collection(db, C_SESS, sid, "subs"), (qs) => {
+        const subs = {}; qs.forEach((x) => (subs[x.id] = x.data()));
+        st.subs = subs; st.subsLoaded = true;
+        studentSync();
+      }, fail));
+    } catch (e) { fail(e); }
+  },
+  saveDraft() {
+    const st = S.st;
+    ls("pe_s_" + st.sid, { me: st.me, draft: st.draft, step: st.step, phase: st.phase, votes: st.votes });
+  },
+  selfPick(id) {
+    const ses = S.st.session, s = ses.students.find((x) => x.id === id);
+    showModal(`<div style="text-align:center;margin-bottom:12px"><div class="muted">내 실력은 어느 정도일까요?</div><div style="font-size:34px;font-weight:900">${esc(s.name)}</div></div>
+      ${ses.criteria.map((c, i) => `<button class="score-btn" onclick="A.selfConfirm('${id}',${i + 1})"><b>${i + 1}점</b><span>${esc(c)}</span></button>`).join("")}
+      <button class="btn ghost big" style="width:100%" onclick="A.closeModal()">← 내 이름이 아니에요</button>`);
+  },
+  selfConfirm(id, score) {
+    const s = S.st.session.students.find((x) => x.id === id);
+    showModal(`<div style="text-align:center"><div class="big-emoji" style="font-size:56px">🤔</div>
+      <div style="font-size:24px;font-weight:900;margin-bottom:6px">${esc(s.name)}, ${score}점</div><div class="muted" style="margin-bottom:20px">이대로 제출할까요?</div>
+      <div class="row" style="justify-content:center"><button class="btn big ghost" onclick="A.selfPick('${id}')">다시 고르기</button><button class="btn big main" onclick="A.selfSubmit('${id}',${score})">제출하기</button></div></div>`);
+  },
+  async selfSubmit(id, score) {
+    const st = S.st;
+    try {
+      await setDoc(doc(db, C_SESS, st.sid, "subs", id), { score, at: Date.now() });
+      st.me = id; A.saveDraft(); closeModal(); render();
+    } catch (e) { fail(e); }
+  },
+  peerClaim(id) {
+    const s = S.st.session.students.find((x) => x.id === id);
+    showModal(`<div style="text-align:center"><div style="font-size:30px;font-weight:900;margin:10px 0 6px">내 이름이 ${esc(s.name)} 맞나요?</div>
+      <div class="muted" style="margin-bottom:20px">한 번 고르면 다른 이름으로 바꿀 수 없어요.</div>
+      <div class="row" style="justify-content:center"><button class="btn big ghost" onclick="A.closeModal()">아니요</button><button class="btn big main" onclick="A.peerClaimGo('${id}')">네, 맞아요</button></div></div>`);
+  },
+  async peerClaimGo(id) {
+    const st = S.st;
+    try {
+      const ref = doc(db, C_SESS, st.sid, "subs", id);
+      await runTransaction(db, async (tx) => {
+        const cur = await tx.get(ref);
+        if (cur.exists()) throw new Error("TAKEN");
+        tx.set(ref, { claimed: true, at: Date.now() });
+      });
+      Object.assign(st, { me: id, draft: {}, step: 0, phase: "rate", votes: [], claimAt: Date.now() });
+      A.saveDraft(); closeModal(); render();
+    } catch (e) {
+      closeModal();
+      if (e && e.message === "TAKEN") toast("이미 다른 기기에서 고른 이름이에요"); else fail(e);
+    }
+  },
+  rate(tid, score) {
+    const st = S.st;
+    st.draft[tid] = score;
+    const n = peerTargets().length;
+    if (st.step < n - 1) st.step++; else st.phase = "vote";
+    A.saveDraft(); render(); window.scrollTo(0, 0);
+  },
+  toggleVote(id) {
+    const st = S.st;
+    if (st.votes.includes(id)) st.votes = st.votes.filter((x) => x !== id);
+    else if (st.votes.length < 2) st.votes.push(id);
+    else toast("2명까지만 고를 수 있어요");
+    A.saveDraft(); render();
+  },
+  async peerSubmit() {
+    const st = S.st;
+    const ratings = {};
+    peerTargets().forEach((t) => { if (st.draft[t] != null) ratings[t] = st.draft[t]; });
+    if (Object.keys(ratings).length < peerTargets().length) { st.phase = "rate"; st.step = 0; render(); return toast("평가하지 않은 친구가 있어요"); }
+    try {
+      await setDoc(doc(db, C_SESS, st.sid, "subs", st.me), { claimed: true, done: true, ratings, votes: st.votes, at: Date.now() });
+      A.saveDraft();
+    } catch (e) { fail(e); }
+  }
+};
+window.A = A;
+
+// 학생: 서버 데이터가 바뀔 때 상태 정리 후 다시 그리기
+function studentSync() {
+  const st = S.st;
+  if (!st.session) return;
+  // 선생님이 '제출 초기화'를 하면 이름 선택부터 다시
+  if (st.me && st.subsLoaded && !st.subs[st.me] && Date.now() - (st.claimAt || 0) > 8000) {
+    Object.assign(st, { me: null, draft: {}, step: 0, phase: "rate", votes: [] });
+    A.saveDraft();
+  }
+  if (S.screen === "student") render();
+}
+
+// ---------------------------------------------------------------------
+// 교사: 자동 저장 · 팀 편성 준비
+// ---------------------------------------------------------------------
+function finalOf(r) {
+  const final = {};
+  r.active.forEach((s) => (final[s.id] = { score: s.score, votes: s.votes }));
+  return final;
+}
+let finalSaving = false;
+async function autoSaveFinal() {
+  const ses = S.session;
+  if (!ses || ses.status !== "open" || finalSaving) return;
+  const r = computeScores(ses, S.subs);
+  if (!(r.allScored && r.allDone)) return;
+  const final = finalOf(r);
+  if (JSON.stringify(final) === JSON.stringify(ses.final || {})) return;
+  finalSaving = true;
+  try { await updateDoc(doc(db, C_SESS, S.sid), { final }); } catch (e) { console.error(e); }
+  finalSaving = false;
+}
+function startTeam(ses, fromLoad, showSaved = false) {
+  const final = { ...(ses.final || {}) };
+  if (showSaved && ses.result && ses.result.scores) {
+    // 출석 체크에서 바꾼 점수까지 반영
+    Object.entries(ses.result.scores).forEach(([id, sc]) => { final[id] = { ...(final[id] || { votes: 0 }), score: sc }; });
+  }
+  const all = ses.students.map((s) => ({ ...s, score: final[s.id] ? final[s.id].score : null, votes: final[s.id] ? final[s.id].votes || 0 : 0 }));
+  const byId = {}; all.forEach((s) => (byId[s.id] = s));
+  const present = {}; all.forEach((s) => (present[s.id] = !!final[s.id]));
+  S.sid = ses.id;
+  S.T = {
+    sid: ses.id, title: ses.title, evalMode: ses.mode, all, byId, present, fromLoad,
+    kind: "mixed", teamCount: 2, boyTeams: 1, girlTeams: 1, pairSame: true, teams: null, resultKind: "mixed", projector: false, saved: true
+  };
+  if (showSaved && ses.result && ses.result.teams) {
+    const R = ses.result;
+    (R.presentIds || []).length && all.forEach((s) => (present[s.id] = R.presentIds.includes(s.id)));
+    S.T.kind = S.T.resultKind = R.kind || "mixed";
+    S.T.teams = R.teams.map((t) => ({ ...t, members: [...t.members] }));
+    Object.assign(S.T, R.options || {});
+  }
+  ls("pe_t_view", { sid: ses.id, screen: "team" });
+  if (fromLoad && !showSaved) go("attend"); else go("team");
+}
+let saveTimer;
+function saveResult() {
+  const T = S.T; if (!T || !T.teams) return;
+  T.saved = false;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await updateDoc(doc(db, C_SESS, T.sid), {
+        result: {
+          kind: T.resultKind, teams: T.teams.map((t) => ({ members: t.members, color: t.color, tag: t.tag || "", pairNo: t.pairNo || null, captain: t.captain || null })),
+          presentIds: T.all.filter((s) => T.present[s.id]).map((s) => s.id),
+          options: { teamCount: T.teamCount, boyTeams: T.boyTeams, girlTeams: T.girlTeams, pairSame: T.pairSame },
+          scores: Object.fromEntries(T.all.filter((s) => s.score != null).map((s) => [s.id, s.score])),
+          at: Date.now()
+        }
+      });
+      T.saved = true;
+      if (S.screen === "team" && !T.projector) render();
+    } catch (e) { fail(e); }
+  }, 700);
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.T && S.T.projector) A.projector(false); });
+
+// ---------------------------------------------------------------------
+// 시작
+// ---------------------------------------------------------------------
+(async function boot() {
+  if (firebaseConfig.apiKey.includes("여기에")) {
+    app.innerHTML = `<div class="center-box"><div class="big-emoji">⚙️</div><div class="s-title">Firebase 설정이 필요해요</div><div class="s-sub">index.html 맨 위의 firebaseConfig에 내 프로젝트 값을 붙여 넣어 주세요.</div></div>`;
+    return;
+  }
+  const room = new URLSearchParams(location.search).get("room");
+  if (room) { S.st.code = room; return A.joinRoom(room); }
+  const view = ls("pe_t_view");
+  if (teacherOK() && view && view.sid) {
+    try {
+      const snap = await getDoc(doc(db, C_SESS, view.sid));
+      if (snap.exists()) {
+        const ses = { id: view.sid, ...snap.data() };
+        if (ses.status === "open") return A.enterLive(view.sid);
+        if (view.screen === "team" && ses.final) {
+          return startTeam(ses, true, !!ses.result);
+        }
+      }
+    } catch (e) { console.error(e); }
+  }
+  S.st.code = ls("pe_s_last") || "";
+  render();
+})();
+</script>
+</body>
+</html>
