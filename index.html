@@ -93,8 +93,15 @@
   .mem .n{font-weight:700;flex:1}
   .mem .sc{font-size:13px;font-weight:800;color:var(--sub)}
   .cap{background:#facc15;color:#422006;font-size:11px;font-weight:900;padding:2px 7px;border-radius:999px}
-  .capbtn{background:transparent;font-size:15px;opacity:.25;padding:0 2px}
-  .capbtn.on{opacity:1}
+  .capbtn{background:transparent;font-size:15px;padding:0 2px;display:flex;align-items:center;gap:2px;filter:grayscale(1);opacity:.55}
+  .capbtn.on{filter:none;opacity:1}
+  .capbtn .vc{font-size:14px;font-weight:900;color:#a16207;min-width:12px}
+  .pairbox{border:1.5px dashed #cbd5d0;border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:5px}
+  .pairbox .plabel{font-size:12px;font-weight:800;color:var(--sub);padding:0 4px;display:flex;justify-content:space-between}
+  .pairbox.kk{border-color:#facc15;background:#fefce8}
+  .pairbox.kk .plabel{color:#a16207}
+  .proj .pairbox{border-color:#cbd5e1;padding:8px}
+  .proj .pairbox .plabel{font-size:18px}
   /* 투사 모드 */
   .proj{position:fixed;inset:0;background:#0f172a;z-index:50;overflow:auto;padding:28px}
   .proj .teams{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
@@ -454,6 +461,45 @@ function computeScores(ses, subs) {
     allDone: active.length > 0 && active.every((s) => s.submitted || s.teacher)
   };
 }
+// 팀 안에서 짝 만들기: 점수가 비슷한 학생끼리 2명씩. 팀 인원이 홀수면 1명은 무작위로 '깍두기'
+//  sameGender=true  : 남-남, 여-여 (남·여가 각각 1명씩 남으면 그 둘을 한 짝으로)
+//  sameGender=false : 남-여 우선, 한쪽 성별이 많으면 남은 학생끼리 남-남(또는 여-여) 짝
+function makeInnerPairs(members, sameGender) {
+  let boys = sortByScore(members.filter((s) => s.gender === "M"));
+  let girls = sortByScore(members.filter((s) => s.gender === "F"));
+  let kk = null;
+  if (members.length % 2 === 1) {
+    // 깍두기는 인원이 홀수인 성별에서 뽑음(혼성은 인원이 더 많은 쪽 우선)
+    let pool;
+    if (sameGender) pool = boys.length % 2 === 1 ? boys : girls;
+    else pool = boys.length >= girls.length ? (boys.length % 2 === 1 ? boys : girls) : (girls.length % 2 === 1 ? girls : boys);
+    kk = pool[Math.floor(Math.random() * pool.length)];
+    boys = boys.filter((s) => s !== kk); girls = girls.filter((s) => s !== kk);
+  }
+  const pairs = [];
+  const adjacent = (list) => { for (let i = 0; i + 1 < list.length; i += 2) pairs.push([list[i], list[i + 1]]); return list.length % 2 ? list[list.length - 1] : null; };
+  if (sameGender) {
+    const lb = adjacent(boys), lg = adjacent(girls);
+    if (lb && lg) pairs.push([lb, lg]);
+  } else {
+    const [small, large] = boys.length <= girls.length ? [boys, girls] : [girls, boys];
+    const a = small.length, b = large.length;
+    const dp = Array.from({ length: a + 1 }, () => Array(b + 1).fill(Infinity));
+    for (let j = 0; j <= b; j++) dp[0][j] = 0;
+    for (let i = 1; i <= a; i++)
+      for (let j = i; j <= b; j++)
+        dp[i][j] = Math.min(dp[i][j - 1], dp[i - 1][j - 1] + Math.abs(small[i - 1].score - large[j - 1].score));
+    const used = new Set(), mixed = [];
+    let i = a, j = b;
+    while (i > 0) {
+      if (j > i && dp[i][j] === dp[i][j - 1]) { j--; continue; }
+      mixed.push([large[j - 1], small[i - 1]]); used.add(large[j - 1].id); i--; j--;
+    }
+    pairs.push(...mixed.reverse());
+    adjacent(large.filter((s) => !used.has(s.id)));
+  }
+  return { pairs: pairs.map((p) => p.map((s) => s.id)), kk: kk ? kk.id : null };
+}
 // ===ALGO END===
 
 // ---------------------------------------------------------------------
@@ -615,7 +661,7 @@ VIEWS.live = () => {
     else if (ses.mode === "peer") {
       if (s.submitted) cls = "done";
       else if (s.score == null) cls = "need";
-      st = `${s.submitted ? "✅ 평가 완료" : s.claimed ? "✏️ 평가 중" : "⏳ 대기"}<br>받은 평가 ${s.received}개 · ${fmtScore(s.score)}점 · 🗳${s.votes}`;
+      st = `${s.submitted ? "✅ 평가 완료" : s.claimed ? "✏️ 평가 중" : "⏳ 대기"}<br>받은 평가 ${s.received}개 · ${fmtScore(s.score)}점 · ⭐${s.votes}표`;
     } else {
       if (s.submitted) { cls = "done"; st = `✅ ${fmtScore(s.score)}점`; } else st = "⏳ 미제출";
     }
@@ -687,7 +733,7 @@ function teamStats(t) {
 function teamCard(t, ti, proj) {
   const T = S.T, c = COLORS[t.color % COLORS.length];
   const st = teamStats(t);
-  const mem = t.members.map((id) => {
+  const chip = (id) => {
     const s = T.byId[id]; if (!s) return "";
     const isCap = t.captain === id;
     if (proj) return `<div class="mem"><span class="n">${esc(s.name)}</span>${isCap ? `<span class="cap">주장</span>` : ""}</div>`;
@@ -695,11 +741,17 @@ function teamCard(t, ti, proj) {
       <span class="g ${s.gender}">${gLabel(s.gender)}</span><span class="n">${esc(s.name)}</span>
       ${isCap ? `<span class="cap">주장</span>` : ""}
       <span class="sc">${fmtScore(s.score)}</span>
-      <button class="capbtn ${isCap ? "on" : ""}" title="주장 지정" onclick="A.setCaptain(${ti},'${id}')">⭐</button></div>`;
-  }).join("");
+      <button class="capbtn ${isCap ? "on" : ""}" title="주장 지정 (숫자는 리더십 투표 득표수)" onclick="A.setCaptain(${ti},'${id}')">⭐${T.evalMode === "peer" ? `<span class="vc">${s.votes || 0}</span>` : ""}</button></div>`;
+  };
+  let mem;
+  if (t.pairs && t.pairs.length + (t.kk ? 1 : 0) > 0) {
+    const pairType = (p) => { const g = p.map((id) => T.byId[id] && T.byId[id].gender); return g[0] === g[1] ? (g[0] === "M" ? "남-남" : "여-여") : "남-여"; };
+    mem = t.pairs.map((p, k) => `<div class="pairbox"><div class="plabel">짝 ${k + 1} ${proj ? "" : `<span>${pairType(p)}</span>`}</div>${p.map(chip).join("")}</div>`).join("")
+      + (t.kk ? `<div class="pairbox kk"><div class="plabel">🎲 깍두기 당첨!</div>${chip(t.kk)}</div>` : "");
+  } else mem = t.members.map(chip).join("");
   const stat = proj ? "" : `<div class="team-stat"><span>👥 ${st.n}명 (남${st.m}·여${st.f})</span><span>📊 평균 ${st.avg.toFixed(2)}</span><span>🔥 4점 ${st.ace}명</span></div>`;
   return `<div class="team" style="border-color:${c.bg}" ${proj ? "" : `ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="A.drop(event,${ti},null)"`}>
-    <div class="team-h" style="background:${c.bg};color:${c.fg}"><span class="nm" ${proj ? "" : `title="눌러서 색 바꾸기" onclick="A.cycleColor(${ti})"`}>${esc(teamName(t, T.kind))}</span>${proj ? "" : `<span style="font-size:12px;opacity:.9">색 바꾸기 ↻</span>`}</div>
+    <div class="team-h" style="background:${c.bg};color:${c.fg}"><span class="nm" ${proj ? "" : `title="눌러서 색 바꾸기" onclick="A.cycleColor(${ti})"`}>${esc(teamName(t, T.resultKind))}</span>${proj ? "" : `<span style="font-size:12px;opacity:.9">색 바꾸기 ↻</span>`}</div>
     ${stat}<div class="members">${mem || `<div class="muted" style="padding:10px">여기로 끌어다 놓기</div>`}</div></div>`;
 }
 VIEWS.team = () => {
@@ -723,8 +775,15 @@ VIEWS.team = () => {
       ${opt}
       <div class="row" style="margin-top:16px"><button class="btn main big" onclick="A.makeTeams()">${T.teams ? "🔀 다시 편성" : "⚡ 팀 편성하기"}</button>
       ${T.teams ? `<button class="btn big blue" onclick="A.projector(true)">📺 칠판 투사 모드</button><button class="btn big" onclick="A.exportXlsx()">📥 엑셀 다운로드</button><span class="muted">${T.saved ? "✔ 결과 저장됨" : "저장 중…"}</span>` : ""}</div>
-      ${T.teams ? `<p class="muted" style="margin-top:10px">💡 학생을 끌어서 다른 팀(또는 다른 학생 위)에 놓으면 이동·교체돼요. ⭐로 주장, 팀 이름을 눌러 색을 바꿔요.</p>` : ""}
+      ${T.teams ? `<p class="muted" style="margin-top:10px">💡 학생을 끌어서 다른 팀(또는 다른 학생 위)에 놓으면 이동·교체돼요. ⭐를 눌러 주장을 정하고, 팀 이름을 눌러 색을 바꿔요.${T.evalMode === "peer" ? " ⭐ 옆 숫자는 리더십 투표 득표수예요." : ""}</p>` : ""}
     </div>
+    ${T.teams && T.resultKind !== "pair" ? `<div class="card"><h3>🤝 팀 안에서 짝 만들기</h3>
+      <p class="muted" style="margin-bottom:10px">지금 만든 팀은 그대로 두고, 각 팀 안에서 점수가 비슷한 학생끼리 2명씩 짝을 지어요. 팀 인원이 홀수면 1명은 깍두기가 돼요.</p>
+      <div class="seg"><button class="${T.innerSame ? "on" : ""}" onclick="S.T.innerSame=true;A.render()">🚹🚹 동성 짝 (남-남 · 여-여)</button>
+        <button class="${!T.innerSame ? "on" : ""}" onclick="S.T.innerSame=false;A.render()">🚹🚺 혼성 짝 (남-여)</button></div>
+      <p class="muted" style="margin-top:8px">${T.innerSame ? "남학생·여학생이 각각 1명씩 남으면 그 둘을 한 짝으로 묶어요." : "한쪽 성별이 더 많으면 남는 학생끼리 남-남(또는 여-여) 짝을 만들어요."}</p>
+      <div class="row" style="margin-top:12px"><button class="btn main" onclick="A.makeInnerPairs()">${T.teams.some((t) => t.pairs) ? "🔀 짝 다시 만들기" : "🤝 팀 안에서 짝 만들기"}</button>
+      ${T.teams.some((t) => t.pairs) ? `<button class="btn" onclick="A.clearInnerPairs()">짝 지우기</button>` : ""}</div></div>` : ""}
     <div class="teams">${teams}</div>
     ${T.projector ? projView() : ""}
   </div>`;
@@ -1055,6 +1114,14 @@ const A = {
     const from = T.teams.findIndex((t) => t.members.includes(id));
     if (from < 0 || id === targetId) return;
     const src = T.teams[from], dst = T.teams[ti];
+    const hadPairs = !!(src.pairs || dst.pairs);
+    if (targetId && from === ti && src.pairs) {
+      // 같은 팀 안에서 맞바꾸기: 짝 구성만 서로 바꿈
+      const swap = (x) => (x === id ? targetId : x === targetId ? id : x);
+      src.pairs = src.pairs.map((p) => p.map(swap)); if (src.kk) src.kk = swap(src.kk);
+      src.members = src.members.map(swap);
+      saveResult(); render(); return;
+    }
     if (targetId) {
       const ai = src.members.indexOf(id), bi = dst.members.indexOf(targetId);
       if (from === ti) { src.members[ai] = targetId; src.members[bi] = id; }
@@ -1068,26 +1135,57 @@ const A = {
       src.members = src.members.filter((x) => x !== id); dst.members.push(id);
       if (src.captain === id) src.captain = null;
     }
+    if (from !== ti && (src.pairs || dst.pairs)) {
+      if (targetId) {
+        // 두 팀 사이 맞바꾸기: 서로의 짝 자리에 그대로 들어감
+        const swapIn = (t, a, b) => { if (t.pairs) { t.pairs = t.pairs.map((p) => p.map((x) => (x === a ? b : x))); if (t.kk === a) t.kk = b; } };
+        swapIn(src, id, targetId); swapIn(dst, targetId, id);
+      } else {
+        // 다른 팀으로 옮기기: 인원이 바뀌므로 두 팀의 짝을 지움
+        src.pairs = src.kk = null; dst.pairs = dst.kk = null;
+        if (hadPairs) toast("팀 인원이 바뀌어 두 팀의 짝을 지웠어요. [짝 다시 만들기]를 눌러 주세요");
+      }
+    }
     saveResult(); render();
   },
+  makeInnerPairs() {
+    const T = S.T; if (!T.teams) return;
+    T.teams.forEach((t) => {
+      const r = makeInnerPairs(t.members.map((id) => T.byId[id]).filter(Boolean), T.innerSame);
+      t.pairs = r.pairs; t.kk = r.kk;
+      // 짝 순서대로 팀원 정렬(엑셀·화면 순서 맞춤)
+      t.members = [...r.pairs.flat(), ...(r.kk ? [r.kk] : [])];
+    });
+    saveResult(); render();
+  },
+  clearInnerPairs() { S.T.teams.forEach((t) => { t.pairs = null; t.kk = null; }); saveResult(); render(); },
   setCaptain(ti, id) { const t = S.T.teams[ti]; t.captain = t.captain === id ? null : id; saveResult(); render(); },
   cycleColor(ti) { const t = S.T.teams[ti]; t.color = (t.color + 1) % COLORS.length; saveResult(); render(); },
   projector(on) { S.T.projector = on; render(); },
   exportXlsx() {
     const T = S.T;
     if (!window.XLSX) return toast("엑셀 라이브러리를 불러오지 못했어요");
-    const rows = [["팀명(색상)", "이름", "성별", "역할", "평가점수", "팀 평균점수"]];
+    const withPairs = T.teams.some((t) => t.pairs);
+    const header = ["팀명(색상)", "이름", "성별", "역할", "평가점수", "팀 평균점수"];
+    if (T.evalMode === "peer") header.push("리더십 득표");
+    if (withPairs) header.push("짝");
+    const rows = [header];
     T.teams.forEach((t, i) => {
       const st = teamStats(t);
       const nm = T.resultKind === "pair" ? `${t.pairNo}조(${COLORS[t.color % COLORS.length].name})` : teamName(t, T.resultKind);
+      const pairOf = {};
+      if (t.pairs) { t.pairs.forEach((p, k) => p.forEach((id) => (pairOf[id] = `짝 ${k + 1}`))); if (t.kk) pairOf[t.kk] = "깍두기"; }
       t.members.forEach((id) => {
         const s = T.byId[id]; if (!s) return;
-        rows.push([nm, s.name, gLabel(s.gender), t.captain === id ? "주장" : "", s.score, st.avg]);
+        const row = [nm, s.name, gLabel(s.gender), t.captain === id ? "주장" : "", s.score, st.avg];
+        if (T.evalMode === "peer") row.push(s.votes || 0);
+        if (withPairs) row.push(pairOf[id] || "");
+        rows.push(row);
       });
       if (i < T.teams.length - 1) rows.push([]);
     });
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [{ wch: 16 }, { wch: 12 }, { wch: 6 }, { wch: 8 }, { wch: 10 }, { wch: 12 }];
+    ws["!cols"] = [{ wch: 16 }, { wch: 12 }, { wch: 6 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "팀편성결과");
     const safe = T.title.replace(/[\\/:*?"<>|]/g, "").trim() || "평가";
@@ -1240,13 +1338,13 @@ function startTeam(ses, fromLoad, showSaved = false) {
   S.sid = ses.id;
   S.T = {
     sid: ses.id, title: ses.title, evalMode: ses.mode, all, byId, present, fromLoad,
-    kind: "mixed", teamCount: 2, boyTeams: 1, girlTeams: 1, pairSame: true, teams: null, resultKind: "mixed", projector: false, saved: true
+    kind: "mixed", teamCount: 2, boyTeams: 1, girlTeams: 1, pairSame: true, innerSame: true, teams: null, resultKind: "mixed", projector: false, saved: true
   };
   if (showSaved && ses.result && ses.result.teams) {
     const R = ses.result;
     (R.presentIds || []).length && all.forEach((s) => (present[s.id] = R.presentIds.includes(s.id)));
     S.T.kind = S.T.resultKind = R.kind || "mixed";
-    S.T.teams = R.teams.map((t) => ({ ...t, members: [...t.members] }));
+    S.T.teams = R.teams.map((t) => ({ ...t, members: [...t.members], pairs: t.pairs ? t.pairs.map((p) => String(p).split(",")) : null, kk: t.kk || null }));
     Object.assign(S.T, R.options || {});
   }
   ls("pe_t_view", { sid: ses.id, screen: "team" });
@@ -1261,7 +1359,8 @@ function saveResult() {
     try {
       await updateDoc(doc(db, C_SESS, T.sid), {
         result: {
-          kind: T.resultKind, teams: T.teams.map((t) => ({ members: t.members, color: t.color, tag: t.tag || "", pairNo: t.pairNo || null, captain: t.captain || null })),
+          kind: T.resultKind, teams: T.teams.map((t) => ({ members: t.members, color: t.color, tag: t.tag || "", pairNo: t.pairNo || null, captain: t.captain || null,
+            pairs: t.pairs ? t.pairs.map((p) => p.join(",")) : null, kk: t.kk || null })),
           presentIds: T.all.filter((s) => T.present[s.id]).map((s) => s.id),
           options: { teamCount: T.teamCount, boyTeams: T.boyTeams, girlTeams: T.girlTeams, pairSame: T.pairSame },
           scores: Object.fromEntries(T.all.filter((s) => s.score != null).map((s) => [s.id, s.score])),
